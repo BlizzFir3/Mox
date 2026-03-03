@@ -12,8 +12,6 @@ impl<'a> Committer<'a> {
 	}
 
 	pub fn create_commit(&self, message: &str) -> Result<String> {
-		// 1. Fetch currently staged files (files added via 'mox add')
-		// For this MVP, we consider all files currently in 'mod_files' as 'staged'
 		let mut stmt = self.db_conn.prepare(
 			"SELECT relative_path, blob_hash FROM mod_files"
 		)?;
@@ -26,7 +24,6 @@ impl<'a> Committer<'a> {
 			anyhow::bail!("Nothing to commit (use 'mox add' first)");
 		}
 
-		// 2. Generate unique Commit Hash based on contents + message
 		let mut hasher = Hasher::new();
 		hasher.update(message.as_bytes());
 		for (path, hash) in &file_entries {
@@ -35,7 +32,6 @@ impl<'a> Committer<'a> {
 		}
 		let commit_hash = hasher.finalize().to_string();
 
-		// 3. Insert Commit Record (Transaction)
 		let tx = self.db_conn.unchecked_transaction()?;
 
 		tx.execute(
@@ -44,7 +40,6 @@ impl<'a> Committer<'a> {
 		)?;
 		let commit_id = tx.last_insert_rowid();
 
-		// 4. Link all files to this specific commit
 		for (path, blob_hash) in file_entries {
 			tx.execute(
 				"INSERT INTO commit_contents (commit_id, blob_hash, relative_path) VALUES (?, ?, ?)",
@@ -52,9 +47,16 @@ impl<'a> Committer<'a> {
 			)?;
 		}
 
+		tx.execute("DELETE FROM mod_files", [])?;
+
+		// SENIOR MOVE: Update the active branch pointer to this new commit
+		let current_branch = crate::core::branch::get_current_branch()?;
+		tx.execute(
+			"UPDATE branches SET last_commit_hash = ? WHERE name = ?",
+			params![commit_hash, current_branch],
+		)?;
+
 		tx.commit().context("Failed to finalize commit transaction")?;
-		// Clear the staging area so the next commit doesn't duplicate these entries
-		self.db_conn.execute("DELETE FROM mod_files", [])?;
 
 		Ok(commit_hash)
 	}

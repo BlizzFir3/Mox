@@ -3,7 +3,6 @@ use rusqlite::{Connection, Result};
 pub fn init_db(conn: &Connection) -> Result<()> {
 	conn.execute_batch("
         PRAGMA journal_mode = WAL;
-        PRAGMA synchronous = NORMAL;
         PRAGMA foreign_keys = ON;
 
         CREATE TABLE IF NOT EXISTS blobs (
@@ -12,29 +11,18 @@ pub fn init_db(conn: &Connection) -> Result<()> {
             added_at TEXT DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'NOW'))
         );
 
-        CREATE TABLE IF NOT EXISTS mods (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            version TEXT,
-            source_path TEXT
-        );
-
         CREATE TABLE IF NOT EXISTS mod_files (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            mod_id INTEGER NOT NULL,
             blob_hash TEXT NOT NULL,
             relative_path TEXT NOT NULL,
-            FOREIGN KEY(mod_id) REFERENCES mods(id),
             FOREIGN KEY(blob_hash) REFERENCES blobs(hash)
         );
 
         CREATE TABLE IF NOT EXISTS commits (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            parent_id INTEGER,
             message TEXT NOT NULL,
             hash TEXT UNIQUE NOT NULL,
-            created_at TEXT DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'NOW')),
-            FOREIGN KEY(parent_id) REFERENCES commits(id)
+            created_at TEXT DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'NOW'))
         );
 
         CREATE TABLE IF NOT EXISTS commit_contents (
@@ -42,10 +30,16 @@ pub fn init_db(conn: &Connection) -> Result<()> {
             blob_hash TEXT NOT NULL,
             relative_path TEXT NOT NULL,
             PRIMARY KEY (commit_id, relative_path),
-            FOREIGN KEY(commit_id) REFERENCES commits(id),
-            FOREIGN KEY(blob_hash) REFERENCES blobs(hash)
+            FOREIGN KEY(commit_id) REFERENCES commits(id)
         );
-    ")?;
 
+        CREATE TABLE IF NOT EXISTS branches (
+            name TEXT PRIMARY KEY,
+            last_commit_hash TEXT,
+            FOREIGN KEY(last_commit_hash) REFERENCES commits(hash)
+        );
+
+        INSERT OR IGNORE INTO branches (name) VALUES ('main');
+    ")?;
 	Ok(())
 }

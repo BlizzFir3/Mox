@@ -6,3 +6,5 @@ pub mod status;
 pub mod checkout;
 pub mod log;
 pub mod clean;
+pub mod ignore;
+pub mod branch;

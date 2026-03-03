@@ -1,8 +1,7 @@
-// src/main.rs
-use anyhow::{Result};
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use rusqlite::Connection;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 mod core;
 mod database;
@@ -17,46 +16,52 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Initialize a new mox repository in the current folder
+    /// Initialize a new mox repository
     Init,
-    /// Add current folder files to staging
+    /// Add files to the staging area
     Add {
-        /// Path to add (use "." for current folder)
         #[arg(default_value = ".")]
-        path: String,
+        path: String
     },
-    /// Create a new snapshot of staged files
+    /// Record changes to the repository
     Commit {
-        /// Commit message
         #[arg(short, long)]
-        message: String,
-    },
-    /// List changes between disk and last commit
-    Status,
-    /// Restore the folder to a specific commit state
-    Checkout {
-        /// Hash prefix of the commit
-        hash: String,
+        message: String
     },
     /// Show commit history
     Log,
+    /// Show the working tree status
+    Status,
+    /// Restore a specific commit or switch to a profile
+    Checkout {
+        name_or_hash: String
+    },
+    /// List profiles, or create a new one if a name is provided
+    Branch {
+        /// Name of the new profile to create
+        name: Option<String>,
+    },
+    /// Clean untracked files
     Clean {
-        /// Actually delete the files
         #[arg(long)]
         force: bool,
-    },
+    }
 }
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
     let mox_db_path = ".mox/mox.db";
 
+    // CONFIGURATION: Set your global storage path here
+    let store_path = PathBuf::from("F:/Mox_Global_Storage/blobs");
+
     match &cli.command {
         Commands::Init => {
             core::repo::init_repository()?;
+            // Ensure HEAD is created on init
+            core::branch::set_current_branch("main")?;
         }
         _ => {
-            // Ensure .mox exists in the current working directory
             if !Path::new(mox_db_path).exists() {
                 anyhow::bail!("Fatal: Not a mox repository. Run 'mox init' first.");
             }
@@ -65,11 +70,8 @@ fn main() -> Result<()> {
 
             match &cli.command {
                 Commands::Add { path } => {
-                    let source_path = Path::new(path);
-                    let storage_path = Path::new(".mox/blobs");
-
-                    let importer = core::mod_importer::ModImporter::new(&conn, storage_path.to_path_buf());
-                    importer.import_mod("StagedFiles", source_path)?;
+                    let importer = core::mod_importer::ModImporter::new(&conn, store_path);
+                    importer.import_all(Path::new(path))?;
                     println!("Successfully indexed files from '{}'", path);
                 }
                 Commands::Commit { message } => {
@@ -80,18 +82,25 @@ fn main() -> Result<()> {
                     }
                 }
                 Commands::Log => {
-                    core::log::show_log(&conn)?; // Changed from core::status to core::log
+                    core::log::show_log(&conn)?;
                 }
                 Commands::Status => {
                     core::status::show_status(&conn)?;
                 }
+                Commands::Checkout { name_or_hash } => {
+                    core::checkout::restore_commit(&conn, name_or_hash, &store_path)?;
+                }
+                Commands::Branch { name } => {
+                    if let Some(branch_name) = name {
+                        core::branch::create_branch(&conn, branch_name)?;
+                    } else {
+                        core::branch::list_branches(&conn)?;
+                    }
+                }
                 Commands::Clean { force } => {
                     core::clean::clean_untracked(&conn, !force)?;
                 }
-                Commands::Checkout { hash } => {
-                    core::checkout::restore_commit(&conn, hash)?;
-                }
-                _ => unreachable!(),
+                _ => {}
             }
         }
     }
