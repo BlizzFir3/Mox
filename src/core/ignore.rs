@@ -1,6 +1,5 @@
 use std::fs;
 use std::path::Path;
-use anyhow::Result;
 
 pub struct MoxIgnore {
 	patterns: Vec<String>,
