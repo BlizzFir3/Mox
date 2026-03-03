@@ -40,6 +40,11 @@ enum Commands {
     },
     /// Show commit history
     Log,
+    Clean {
+        /// Actually delete the files
+        #[arg(long)]
+        force: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -79,6 +84,9 @@ fn main() -> Result<()> {
                 }
                 Commands::Status => {
                     core::status::show_status(&conn)?;
+                }
+                Commands::Clean { force } => {
+                    core::clean::clean_untracked(&conn, !force)?;
                 }
                 Commands::Checkout { hash } => {
                     core::checkout::restore_commit(&conn, hash)?;

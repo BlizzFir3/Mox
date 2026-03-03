@@ -53,6 +53,8 @@ impl<'a> Committer<'a> {
 		}
 
 		tx.commit().context("Failed to finalize commit transaction")?;
+		// Clear the staging area so the next commit doesn't duplicate these entries
+		self.db_conn.execute("DELETE FROM mod_files", [])?;
 
 		Ok(commit_hash)
 	}

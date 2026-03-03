@@ -62,8 +62,8 @@ impl<'a> ModImporter<'a> {
 
 		// 4. Register blob in DB
 		self.db_conn.execute(
-			"INSERT OR IGNORE INTO blobs (hash, size_bytes) VALUES (?, ?)",
-			rusqlite::params![hash, size as i64],
+			"INSERT OR REPLACE INTO mod_files (mod_id, blob_hash, relative_path) VALUES (?, ?, ?)",
+			rusqlite::params![mod_id, hash, relative_path],
 		)?;
 
 		// 5. Link the file to this mod's instance
