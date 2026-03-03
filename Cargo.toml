@@ -1,19 +1,33 @@
 [package]
 name = "mox"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
+authors = ["Your Name"]
+description = "A high-performance, Git-like version control for game mods"
 
 [dependencies]
-# Database
-rusqlite = { version = "0.31.0", features = ["bundled"] }
-# Ultra-fast hashing (Low-end friendly)
-blake3 = "1.5.0"
-# Error handling
-anyhow = "1.0"
-# File path manipulation
-walkdir = "2.4"
-# Serialization (for future manifests)
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
 # CLI Argument Parser
 clap = { version = "4.4", features = ["derive"] }
+
+# Database (Bundled ensures it works even if SQLite isn't installed on the system)
+rusqlite = { version = "0.31.0", features = ["bundled"] }
+
+# Hashing (BLAKE3 is significantly faster than SHA-256 for large mod files)
+blake3 = "1.5.0"
+
+# Error Handling (Standard for Senior Rust Devs)
+anyhow = "1.0"
+
+# Directory Walking
+walkdir = "2.4"
+
+# Date and Time formatting (Essential for 'mox log')
+chrono = "0.4"
+
+# Serialization (Future-proofing for Modpack exports)
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[target.'cfg(windows)'.dependencies]
+# Windows-specific system calls if we need deeper FS integration later
+winapi = { version = "0.3", features = ["fileapi", "winbase"] }

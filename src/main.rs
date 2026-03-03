@@ -1,5 +1,5 @@
 // src/main.rs
-use anyhow::{Context, Result};
+use anyhow::{Result};
 use clap::{Parser, Subcommand};
 use rusqlite::Connection;
 use std::path::Path;
@@ -38,6 +38,8 @@ enum Commands {
         /// Hash prefix of the commit
         hash: String,
     },
+    /// Show commit history
+    Log,
 }
 
 fn main() -> Result<()> {
@@ -71,6 +73,9 @@ fn main() -> Result<()> {
                         Ok(hash) => println!("[main {}] {}", &hash[..7], message),
                         Err(e) => eprintln!("Commit failed: {}", e),
                     }
+                }
+                Commands::Log => {
+                    core::log::show_log(&conn)?; // Changed from core::status to core::log
                 }
                 Commands::Status => {
                     core::status::show_status(&conn)?;

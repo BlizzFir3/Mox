@@ -41,23 +41,14 @@ pub fn init_db(conn: &Connection) -> Result<()> {
 
 	conn.execute_batch("
     CREATE TABLE IF NOT EXISTS commits (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        parent_id INTEGER,
-        message TEXT NOT NULL,
-        hash TEXT UNIQUE NOT NULL, -- The hash of the commit itself
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(parent_id) REFERENCES commits(id)
-    );
-
-    CREATE TABLE IF NOT EXISTS commit_contents (
-        commit_id INTEGER NOT NULL,
-        blob_hash TEXT NOT NULL,
-        relative_path TEXT NOT NULL,
-        PRIMARY KEY (commit_id, relative_path),
-        FOREIGN KEY(commit_id) REFERENCES commits(id),
-        FOREIGN KEY(blob_hash) REFERENCES blobs(hash)
-    );
-")?;
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		parent_id INTEGER,
+		message TEXT NOT NULL,
+		hash TEXT UNIQUE NOT NULL,
+		created_at TEXT DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'NOW')),
+		FOREIGN KEY(parent_id) REFERENCES commits(id)
+	)
+	")?;
 
 	Ok(())
 }
