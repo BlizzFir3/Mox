@@ -18,6 +18,9 @@ impl<'a> ModImporter<'a> {
 	pub fn import_all(&self, source_dir: &Path) -> Result<()> {
 		let ignore = MoxIgnore::load();
 
+		// Clear the temporary table to purge files deleted from disk
+		self.db_conn.execute("DELETE FROM mod_files", [])?;
+
 		for entry in WalkDir::new(source_dir).into_iter().filter_map(|e| e.ok()) {
 			let path = entry.path();
 

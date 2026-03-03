@@ -32,6 +32,15 @@ impl<'a> Committer<'a> {
 		}
 		let commit_hash = hasher.finalize().to_string();
 
+		// Check if this hash is exactly the same as the last commit
+		let current_branch = crate::core::branch::get_current_branch()?;
+		let mut stmt = self.db_conn.prepare("SELECT last_commit_hash FROM branches WHERE name = ?")?;
+		if let Ok(Some(last_hash)) = stmt.query_row([&current_branch], |row| row.get::<_, Option<String>>(0)) {
+			if last_hash == commit_hash {
+				anyhow::bail!("No changes detected. Working directory is clean.");
+			}
+		}
+
 		let tx = self.db_conn.unchecked_transaction()?;
 
 		tx.execute(
