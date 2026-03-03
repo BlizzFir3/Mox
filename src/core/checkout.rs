@@ -88,6 +88,19 @@ pub fn restore_commit(conn: &Connection, target: &str, store_path: &Path) -> Res
 	// by the previous branch's file structure.
 	crate::core::clean::clean_empty_directories(Path::new("."))?;
 
+	// --- 5. SYNC STAGING AREA (INDEX) ---
+	// Ensure the staging area perfectly mirrors the newly checked-out state
+	conn.execute("DELETE FROM mod_files", [])?;
+	conn.execute(
+		"INSERT INTO mod_files (blob_hash, relative_path) 
+         SELECT blob_hash, relative_path FROM commit_contents WHERE commit_id = ?",
+		params![commit_id]
+	)?;
+
+	// --- 6. DEFRAGMENTATION & CLEANUP ---
+	// Prevent directory fragmentation by removing empty folders...
+	crate::core::clean::clean_empty_directories(Path::new("."))?;
+
 	println!("Successfully deployed {} real files to your Mods folder.", count);
 	Ok(())
 }
