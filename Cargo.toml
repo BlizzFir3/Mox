@@ -4,14 +4,16 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-# Base de données
+# Database
 rusqlite = { version = "0.31.0", features = ["bundled"] }
-# Hashing ultra-rapide (Low-end friendly)
+# Ultra-fast hashing (Low-end friendly)
 blake3 = "1.5.0"
-# Gestion d'erreurs
+# Error handling
 anyhow = "1.0"
-# Manipulation de chemins de fichiers
+# File path manipulation
 walkdir = "2.4"
-# Sérialisation (pour les futurs manifests)
+# Serialization (for future manifests)
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+# CLI Argument Parser
+clap = { version = "4.4", features = ["derive"] }
