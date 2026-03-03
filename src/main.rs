@@ -17,21 +17,27 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Initialize a new mox repository
+    /// Initialize a new mox repository in the current folder
     Init,
-    /// Add files to the staging area (index)
+    /// Add current folder files to staging
     Add {
-        /// The path to the file or directory to add
+        /// Path to add (use "." for current folder)
+        #[arg(default_value = ".")]
         path: String,
     },
-    /// Record changes to the repository
+    /// Create a new snapshot of staged files
     Commit {
         /// Commit message
         #[arg(short, long)]
         message: String,
     },
-    /// Show the working tree status
+    /// List changes between disk and last commit
     Status,
+    /// Restore the folder to a specific commit state
+    Checkout {
+        /// Hash prefix of the commit
+        hash: String,
+    },
 }
 
 fn main() -> Result<()> {
@@ -43,9 +49,9 @@ fn main() -> Result<()> {
             core::repo::init_repository()?;
         }
         _ => {
-            // Guard: Ensure we are in a mox repo for all other commands
+            // Ensure .mox exists in the current working directory
             if !Path::new(mox_db_path).exists() {
-                anyhow::bail!("Fatal: Not a mox repository (or any of the parent directories): .mox");
+                anyhow::bail!("Fatal: Not a mox repository. Run 'mox init' first.");
             }
 
             let conn = Connection::open(mox_db_path)?;
@@ -55,10 +61,9 @@ fn main() -> Result<()> {
                     let source_path = Path::new(path);
                     let storage_path = Path::new(".mox/blobs");
 
-                    // Logic: Walk directory, hash files, and record in DB
                     let importer = core::mod_importer::ModImporter::new(&conn, storage_path.to_path_buf());
                     importer.import_mod("StagedFiles", source_path)?;
-                    println!("Successfully added '{}' to staging.", path);
+                    println!("Successfully indexed files from '{}'", path);
                 }
                 Commands::Commit { message } => {
                     let committer = core::commit::Committer::new(&conn);
@@ -68,8 +73,10 @@ fn main() -> Result<()> {
                     }
                 }
                 Commands::Status => {
-                    // Logic: Compare current files on disk with the last commit
                     core::status::show_status(&conn)?;
+                }
+                Commands::Checkout { hash } => {
+                    core::checkout::restore_commit(&conn, hash)?;
                 }
                 _ => unreachable!(),
             }

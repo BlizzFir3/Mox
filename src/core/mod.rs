@@ -1,6 +1,6 @@
-mod hasher;
-mod fs_manager;
-mod mod_importer;
-mod repo;
-mod staging;
-mod commit;
+pub mod hasher;
+pub mod repo;
+pub mod mod_importer;
+pub mod commit;
+pub mod status;
+pub mod checkout;
